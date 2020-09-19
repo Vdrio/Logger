@@ -13,7 +13,6 @@ namespace LoggerExample
             ex.Log();
             ex.Log("testing");
             ex.Log("testing{0}", "params");
-
             Console.Read();
         }
     }

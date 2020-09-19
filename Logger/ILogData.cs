@@ -34,11 +34,46 @@ namespace Vdrio.Diagnostics
     {
         Exception,
         Trace,
+        Debug,
+        Warn,
+        Error,
+        UserInput
+    }
+
+    public enum WarningLevel
+    {
+        Info,
+        Moderate,
+        Severe
+    }
+
+    public enum ErrorLevel
+    {
+        Low,
+        Moderate,
+        Severe,
+        Critical,
+        Fatal
     }
     public enum TraceType
     {
         Start,
         InProgress,
         Complete
+    }
+
+    public enum UserInputType
+    {
+        Click,
+        RightClick,
+        Navigation,
+        Swipe,
+        LongPress,
+        DoubleClick,
+        MultiClick,
+        DragAndDrop,
+        KeyPress,
+        Shortcut,
+        Other
     }
 }
