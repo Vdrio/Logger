@@ -17,6 +17,16 @@ namespace Vdrio.Diagnostics
         string LongLogMessage { get; set; }
         string ShortLogMessage { get; set; }
         string Message { get; set; }
+        [Ignore]
+        LogDataType LogType { get; set; }
+        int LogTypeInt { get; set; }
+
+        void CreateDebugLogData(string message);
+        void CreateErrorLogData();
+        void CreateExceptionLogData(Exception ex, string messsage);
+        void CreateTraceLogData(TraceType type, string message);
+        public abstract void CreateUserInputLogData();
+
     }
 
 
