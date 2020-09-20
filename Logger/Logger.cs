@@ -818,36 +818,6 @@ namespace Vdrio.Diagnostics
             }
             return null;
         }
-
-        internal static string CreateUniqueId<T>(this SQLiteConnection db) where T : BaseLogData, new()
-        {
-            try
-            {
-                if (!Logger<T>.Initialized)
-                {
-                    Logger<T>.Initialize();
-                }
-                if (db.TableMappings.FirstOrDefault(x => x.MappedType == typeof(LogData)) == null)
-                {
-                    throw new NotImplementedException("Database must have a table of type LogData");
-                }
-                bool isUnique = false;
-                while (!isUnique)
-                {
-                    string guid = Guid.NewGuid().ToString();
-                    if (db.Table<T>().FirstOrDefault(x => x.Id == guid) == null)
-                    {
-                        return guid;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                SDebug.WriteLine(ex.Message);
-                throw new NotImplementedException("A class that implements BaseLogData must also include a parameterless constructor");
-            }
-            return null;
-        }
     }
 
 
