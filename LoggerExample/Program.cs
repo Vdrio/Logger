@@ -10,12 +10,12 @@ namespace LoggerExample
         static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
-            Logger.Initialize(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),"VdrioLogger", "MyLogFile") ,true, TimeSpan.FromMinutes(10), TimeSpan.FromHours(3));
-            Logger.Trace(TraceType.Start, "Started testing logger");
+            Logger<MyLogData>.Initialize(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),"VdrioLogger", "MyLogFileStuff") ,true, TimeSpan.FromMinutes(.5), Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "VdrioLoggerArchive"), TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(3));
+            Logger<MyLogData>.Trace(TraceType.Start, "Started testing logger");
             Exception ex = new Exception();
-            ex.Log();
-            ex.Log("testing");
-            ex.Log("testing{0}", "params");
+            ex.Log<MyLogData>();
+            ex.Log<MyLogData>("testing");
+            ex.Log<MyLogData>("testing{0}", "params");
             StartTesting();
             Console.Read();
         }
@@ -23,18 +23,18 @@ namespace LoggerExample
         static int count = 1;
         async static void StartTesting()
         {
-            Logger.Trace(TraceType.Start, $"Started testing loop, iteration {count}");
-            await Task.Delay(TimeSpan.FromMinutes(.1));
+            Logger<MyLogData>.Trace(TraceType.Start, $"Started testing loop, iteration {count}");
+            await Task.Delay(TimeSpan.FromMinutes(.05));
             CauseException();
-            Logger.Trace(TraceType.InProgress, "Testing loop caused exception");
-            Logger.Warn(WarningLevel.Severe, "Severe Warning Test");
-            Logger.Error(ErrorLevel.Critical, "Critical Error Test");
-            Logger.Debug("Just a debug message");
-            Logger.UserInput(UserInputType.Navigation, "User navigation test");
+            Logger<MyLogData>.Trace(TraceType.InProgress, "Testing loop caused exception");
+            Logger<MyLogData>.Warn(WarningLevel.Severe, "Severe Warning Test");
+            Logger<MyLogData>.Error(ErrorLevel.Critical, "Critical Error Test");
+            Logger<MyLogData>.Debug("Just a debug message");
+            Logger<MyLogData>.UserInput(UserInputType.Navigation, "User navigation test");
             Exception ex = new Exception();
-            ex.Log(Guid.NewGuid().ToString());
+            ex.Log<MyLogData>(Guid.NewGuid().ToString());
             count++;
-            Logger.Trace(TraceType.Complete, "Finished testing loop");
+            Logger<MyLogData>.Trace(TraceType.Complete, "Finished testing loop");
             StartTesting();
         }
 
@@ -51,7 +51,7 @@ namespace LoggerExample
             }
             catch (Exception x)
             {
-                x.Log();
+                x.Log<MyLogData>();
             }
         }
         private static void CauseInnerException()

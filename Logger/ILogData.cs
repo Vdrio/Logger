@@ -84,5 +84,6 @@ namespace Vdrio.Diagnostics
     public delegate void LoggerEventArgs(BaseLogData logData);
 
     public delegate void LogFileCompletedEventArgs(string oldLogFilePath);
+    public delegate void LogFileArchivedEventArgs(string archiveLogFilePath);
 
 }
