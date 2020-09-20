@@ -818,6 +818,36 @@ namespace Vdrio.Diagnostics
             }
             return null;
         }
+
+        internal static string CreateUniqueId<T>(this SQLiteConnection db) where T : BaseLogData, new()
+        {
+            try
+            {
+                if (!Logger<T>.Initialized)
+                {
+                    Logger<T>.Initialize();
+                }
+                if (db.TableMappings.FirstOrDefault(x => x.MappedType == typeof(T)) == null)
+                {
+                    throw new NotImplementedException("Database must have a table of type " + typeof(T).ToString());
+                }
+                bool isUnique = false;
+                while (!isUnique)
+                {
+                    string guid = Guid.NewGuid().ToString();
+                    if (db.Table<T>().FirstOrDefault(x => x.Id == guid) == null)
+                    {
+                        return guid;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                SDebug.WriteLine(ex.Message);
+                throw new NotImplementedException("A class that implements BaseLogData must also include a parameterless constructor");
+            }
+            return null;
+        }
     }
 
 
@@ -1153,7 +1183,7 @@ namespace Vdrio.Diagnostics
                         AnyLogAdded?.Invoke(data);
                         if (SaveToSQLDatabase)
                         {
-                            data.Id = Database.CreateUniqueId();
+                            data.Id = Database.CreateUniqueId<T>();
                             Database.Insert(data);
                         }
                     }
@@ -1225,7 +1255,7 @@ namespace Vdrio.Diagnostics
                         AnyLogAdded?.Invoke(data);
                         if (SaveToSQLDatabase)
                         {
-                            data.Id = Database.CreateUniqueId();
+                            data.Id = Database.CreateUniqueId<T>();
                             Database.Insert(data);
                         }
                     }
@@ -1291,7 +1321,7 @@ namespace Vdrio.Diagnostics
                         AnyLogAdded?.Invoke(data);
                         if (SaveToSQLDatabase)
                         {
-                            data.Id = Database.CreateUniqueId();
+                            data.Id = Database.CreateUniqueId<T>();
                             Database.Insert(data);
                         }
                     }
@@ -1357,7 +1387,7 @@ namespace Vdrio.Diagnostics
                         AnyLogAdded?.Invoke(data);
                         if (SaveToSQLDatabase)
                         {
-                            data.Id = Database.CreateUniqueId();
+                            data.Id = Database.CreateUniqueId<T>();
                             Database.Insert(data);
                         }
                     }
@@ -1423,7 +1453,7 @@ namespace Vdrio.Diagnostics
                         AnyLogAdded?.Invoke(data);
                         if (SaveToSQLDatabase)
                         {
-                            data.Id = Database.CreateUniqueId();
+                            data.Id = Database.CreateUniqueId<T>();
                             Database.Insert(data);
                         }
                     }
@@ -1488,7 +1518,7 @@ namespace Vdrio.Diagnostics
                         AnyLogAdded?.Invoke(data);
                         if (SaveToSQLDatabase)
                         {
-                            data.Id = Database.CreateUniqueId();
+                            data.Id = Database.CreateUniqueId<T>();
                             Database.Insert(data);
                         }
                     }
