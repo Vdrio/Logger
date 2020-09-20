@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using SDebug = System.Diagnostics.Debug;
+using System.Globalization;
 
 namespace Vdrio.Diagnostics
 {
@@ -16,22 +17,54 @@ namespace Vdrio.Diagnostics
         private static object logMonitor = new object();
         public static SQLiteConnection Database { get; private set; }
 
+        public static StreamWriter TextLog { get; private set; }
+
+        private static bool SaveToSQLDatabase { get; set; }
+
+        public static string CurrentTextLogPath { get; private set; }
+        public static string CurrentBaseLogPath { get; private set; }
+
+        private static Timer CreateNewLogFileTimer { get; set; }
+        private static Timer DeleteAfterTimer { get; set; }
+
+        private static TimeSpan CreateNewLogFileInterval { get; set; }
+        private static TimeSpan DeleteAfter { get; set; }
+
+        public static event LoggerEventArgs AnyLogAdded;
+        public static event LoggerEventArgs ExceptionLogAdded;
+        public static event LoggerEventArgs DebugLogAdded;
+        public static event LoggerEventArgs WarnLogAdded;
+        public static event LoggerEventArgs ErrorLogAdded;
+        public static event LoggerEventArgs UserInputLogAdded;
+        public static event LoggerEventArgs TraceLogAdded;
+
+        public static event LogFileCompletedEventArgs LogFileCompleted;
+        
+
 
         /// <summary>
         /// The main Initialize method. Instantiates the SQLite connection where LogData is stored
         /// </summary>
         /// <remarks>
         /// <para> Must be called before any logging is done.</para>
+        /// <para> Default values for TimeSpans are 12 hours, 30 days, respectively</para>
         /// </remarks>
-        public static void Initialize()
+        
+        public static void Initialize(bool saveToSQLDatabase = true, TimeSpan? createNewLogFileInterval = null, TimeSpan? deleteAfter = null)
         {
             try
             {
+                //Assign default values that were unable to be compile time constants
+                CreateNewLogFileInterval = createNewLogFileInterval ?? TimeSpan.FromHours(12);
+                DeleteAfter = deleteAfter ?? TimeSpan.FromDays(30);
+                SaveToSQLDatabase = saveToSQLDatabase;
+
+
                 if (!Directory.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VdrioLogger")))
                 {
                     Directory.CreateDirectory(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VdrioLogger"));
                 }
-                Initialize(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VdrioLogger", "log.db"));
+                Initialize(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VdrioLogger", "log.db"), saveToSQLDatabase, CreateNewLogFileInterval, DeleteAfter);
             }
             catch(Exception ex)
             {
@@ -46,19 +79,164 @@ namespace Vdrio.Diagnostics
         /// </summary>
         /// <remarks>
         /// <para> Must be called before any logging is done.</para>
+        /// <para> File path will include start date time appended at end of file, format: {logFileName}MMddyyyy_HHMM.db</para>
+        /// <para> Path will ignore file type, ie .txt, .db. This will make a .txt file and optional .db file for log storage</para>
         /// </remarks>
-        public static void Initialize(string dbPath)
+        public static void Initialize(string path, bool saveToSQLDatabase = true, TimeSpan? createNewLogFileInterval = null, TimeSpan? deleteAfter = null)
         {
             try
             {
-                Database = new SQLiteConnection(dbPath);
-                Database.CreateTable(typeof(LogData));
+                //Initialize could get called multiple times, want to make sure this doesn't get added more than once
+                AnyLogAdded -= Logger_AnyLogAdded;
+                AnyLogAdded += Logger_AnyLogAdded;
+
+                //Assign default values that were unable to be compile time constants
+                CreateNewLogFileInterval = createNewLogFileInterval ?? TimeSpan.FromHours(12);
+                DeleteAfter = deleteAfter ?? TimeSpan.FromDays(30);
+
+                SaveToSQLDatabase = saveToSQLDatabase;
+
+                string[] pathSplit = path.Split('.');
+                TimeSpan timeOfDay = DateTime.Now - DateTime.Today;
+                DateTime startTime = DateTime.Today;
+                if (pathSplit?.Length == 2 || !path.Contains("."))
+                {
+                    if (timeOfDay > createNewLogFileInterval)
+                    {
+                        int currentIntervalCount = (int)(timeOfDay.Ticks / ((TimeSpan)createNewLogFileInterval).Ticks);
+                        startTime += TimeSpan.FromTicks(((TimeSpan)createNewLogFileInterval).Ticks * currentIntervalCount);
+                    }
+                    if (!path.Contains("."))
+                    {
+                        CurrentBaseLogPath = path;
+                        path += startTime.ToString("MMddyyyy_HHmmss") + ".db";
+                    }
+                    else
+                    {
+                        CurrentBaseLogPath = pathSplit[0];
+                        pathSplit[0] += startTime.ToString("MMddyyyy_HHmmss") + ".db";
+                        path = pathSplit[0];
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("Provided path is invalid");
+                }
+                CurrentTextLogPath = path.Replace(".db", ".txt");
+                if (!File.Exists(CurrentTextLogPath))
+                {
+                    TextLog = File.CreateText(CurrentTextLogPath);
+                    TextLog.Close();
+                    TextLog.Dispose();
+                }
+                CreateNewLogFileTimer?.Dispose();
+                CreateNewLogFileTimer = new Timer(new TimerCallback(NewLogFileIntervalHit), path, (TimeSpan)(startTime + CreateNewLogFileInterval - DateTime.Now), (TimeSpan)CreateNewLogFileInterval);
+
+                if (SaveToSQLDatabase)
+                {
+                    Database = new SQLiteConnection(path);
+                    Database.CreateTable(typeof(LogData));
+                }
                 Initialized = true;
             }
             catch(Exception ex)
             {
-                SDebug.WriteLine("Failed to initialize logger for path: " + dbPath + ":\n" + ex);
+                SDebug.WriteLine("Failed to initialize logger for path: " + path + ":\n" + ex);
                 throw ex;
+            }
+        }
+
+        public static void NewLogFileIntervalHit(object state)
+        {
+            string path = CurrentBaseLogPath;
+            string[] pathSplit = path.Split('.');
+            TimeSpan timeOfDay = DateTime.Now - DateTime.Today;
+            DateTime startTime = DateTime.Today;
+            if (pathSplit?.Length == 2 || !path.Contains("."))
+            {
+                if (timeOfDay > CreateNewLogFileInterval)
+                {
+                    int currentIntervalCount = (int)(timeOfDay.Ticks / ((TimeSpan)CreateNewLogFileInterval).Ticks);
+                    startTime += TimeSpan.FromTicks(((TimeSpan)CreateNewLogFileInterval).Ticks * currentIntervalCount);
+                }
+                if (!path.Contains("."))
+                {
+                    path += startTime.ToString("MMddyyyy_HHmmss") + ".db";
+                }
+                else
+                {
+                    pathSplit[0] += startTime.ToString("MMddyyyy_HHmmss") + ".db";
+                    path = pathSplit[0];
+                }
+                string oldFilePath = CurrentTextLogPath;
+                CurrentTextLogPath = path.Replace(".db", ".txt");
+                TextLog = File.CreateText(CurrentTextLogPath);
+                TextLog.Close();
+                if (SaveToSQLDatabase)
+                {
+                    Database = new SQLiteConnection(path);
+                    Database.CreateTable(typeof(LogData));
+                }
+                DeleteOldFiles();
+                LogFileCompleted?.Invoke(oldFilePath);
+            }
+            else
+            {
+                throw new InvalidOperationException("Provided path is invalid");
+            }
+        }
+
+        public static void DeleteOldFiles()
+        {
+            string[] path = CurrentBaseLogPath.Split('\\');
+            path[path.Length - 1] = "";
+            foreach(var file in Directory.GetFiles(string.Join("\\", path), "*.*"))
+            {
+                string dateTimeString = file.Split('\\')?.Last().Replace(CurrentBaseLogPath.Split('\\')?.Last(), "").Split('.').First();
+
+                if (DateTime.TryParseExact(dateTimeString, "MMddyyyy_HHmmss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out DateTime time))
+                {
+                    if (DateTime.Now - time >= DeleteAfter)
+                    {
+                        File.Delete(file);
+                    }
+                }
+            }
+            
+        }
+
+        private static void WriteToTextFile(LogData data)
+        {
+            using (TextLog = new StreamWriter(CurrentTextLogPath, true))
+            {
+                TextLog.AutoFlush = true;
+                TextLog.WriteLine(data.LongLogMessage);
+                TextLog.Close();
+            }
+        }
+
+        private static void Logger_AnyLogAdded(BaseLogData logData)
+        {
+            switch (logData.LogType)
+            {
+                case LogDataType.Error: 
+                    ErrorLogAdded?.Invoke(logData);
+                    break;
+                case LogDataType.Exception: 
+                    ExceptionLogAdded?.Invoke(logData);
+                    break;
+                case LogDataType.Debug: 
+                    DebugLogAdded?.Invoke(logData);
+                    break;
+                case LogDataType.Warn: 
+                    WarnLogAdded?.Invoke(logData);
+                    break;
+                case LogDataType.Trace:
+                    TraceLogAdded?.Invoke(logData);
+                    break;
+                case LogDataType.UserInput:
+                    UserInputLogAdded?.Invoke(logData);
+                    break;
             }
         }
 
@@ -83,8 +261,15 @@ namespace Vdrio.Diagnostics
                     try
                     {
                         LogData data = new LogData(LogDataType.Trace, type, message);
-                        data.Id = Database.CreateUniqueId();
-                        Database.Insert(data);
+
+                        WriteToTextFile(data);
+
+                        AnyLogAdded?.Invoke(data);
+                        if (SaveToSQLDatabase)
+                        {
+                            data.Id = Database.CreateUniqueId();
+                            Database.Insert(data);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -147,8 +332,14 @@ namespace Vdrio.Diagnostics
                     try
                     {
                         LogData data = new LogData(LogDataType.Exception, ex, message);
-                        data.Id = Database.CreateUniqueId();
-                        Database.Insert(data);
+
+                        WriteToTextFile(data);
+                        AnyLogAdded?.Invoke(data);
+                        if (SaveToSQLDatabase)
+                        {
+                            data.Id = Database.CreateUniqueId();
+                            Database.Insert(data);
+                        }
                     }
                     catch (Exception x)
                     {
@@ -160,7 +351,8 @@ namespace Vdrio.Diagnostics
                     }
                 }))
                 {
-                    IsBackground = true
+                    IsBackground = true,
+                    Priority = ThreadPriority.Lowest
                 };
                 t.Start();
             }
@@ -205,8 +397,14 @@ namespace Vdrio.Diagnostics
                     try
                     {
                         LogData data = new LogData(LogDataType.Debug, message);
-                        data.Id = Database.CreateUniqueId();
-                        Database.Insert(data);
+
+                        WriteToTextFile(data);
+                        AnyLogAdded?.Invoke(data);
+                        if (SaveToSQLDatabase)
+                        {
+                            data.Id = Database.CreateUniqueId();
+                            Database.Insert(data);
+                        }
                     }
                     catch (Exception x)
                     {
@@ -218,7 +416,8 @@ namespace Vdrio.Diagnostics
                     }
                 }))
                 {
-                    IsBackground = true
+                    IsBackground = true,
+                    Priority = ThreadPriority.Lowest
                 };
                 t.Start();
             }
@@ -263,8 +462,14 @@ namespace Vdrio.Diagnostics
                     try
                     {
                         LogData data = new LogData(LogDataType.Warn, level, message);
-                        data.Id = Database.CreateUniqueId();
-                        Database.Insert(data);
+
+                        WriteToTextFile(data);
+                        AnyLogAdded?.Invoke(data);
+                        if (SaveToSQLDatabase)
+                        {
+                            data.Id = Database.CreateUniqueId();
+                            Database.Insert(data);
+                        }
                     }
                     catch (Exception x)
                     {
@@ -276,7 +481,8 @@ namespace Vdrio.Diagnostics
                     }
                 }))
                 {
-                    IsBackground = true
+                    IsBackground = true,
+                    Priority = ThreadPriority.Lowest
                 };
                 t.Start();
             }
@@ -321,8 +527,15 @@ namespace Vdrio.Diagnostics
                     try
                     {
                         LogData data = new LogData(LogDataType.Error, level, message);
-                        data.Id = Database.CreateUniqueId();
-                        Database.Insert(data);
+
+                        WriteToTextFile(data);
+
+                        AnyLogAdded?.Invoke(data);
+                        if (SaveToSQLDatabase)
+                        {
+                            data.Id = Database.CreateUniqueId();
+                            Database.Insert(data);
+                        }
                     }
                     catch (Exception x)
                     {
@@ -334,7 +547,8 @@ namespace Vdrio.Diagnostics
                     }
                 }))
                 {
-                    IsBackground = true
+                    IsBackground = true,
+                    Priority = ThreadPriority.Lowest
                 };
                 t.Start();
             }
@@ -379,8 +593,14 @@ namespace Vdrio.Diagnostics
                     try
                     {
                         LogData data = new LogData(LogDataType.UserInput, type, message);
-                        data.Id = Database.CreateUniqueId();
-                        Database.Insert(data);
+
+                        WriteToTextFile(data);
+                        AnyLogAdded?.Invoke(data);
+                        if (SaveToSQLDatabase)
+                        {
+                            data.Id = Database.CreateUniqueId();
+                            Database.Insert(data);
+                        }
                     }
                     catch (Exception x)
                     {
@@ -392,7 +612,8 @@ namespace Vdrio.Diagnostics
                     }
                 }))
                 {
-                    IsBackground = true
+                    IsBackground = true,
+                    Priority = ThreadPriority.Lowest
                 };
                 t.Start();
             }
@@ -461,7 +682,7 @@ namespace Vdrio.Diagnostics
                 {
                     Initialize();
                 }
-                if (!db.TableMappings.Contains(new TableMapping(typeof(LogData))))
+                if (db.TableMappings.FirstOrDefault(x=>x.MappedType == typeof(LogData)) == null)
                 {
                     throw new NotImplementedException("Database must have a table of type LogData");
                 }
@@ -482,10 +703,7 @@ namespace Vdrio.Diagnostics
             }
             return null;
         }
-
     }
-
-
 
 
     public static class Logger<T> where T : BaseLogData, new()

@@ -9,12 +9,14 @@ namespace Vdrio.Diagnostics
     {
         public BaseLogData()
         {
-
+            Id = Guid.NewGuid().ToString();
+            Time = DateTime.Now;
         }
         public BaseLogData(LogDataType type, params object[] parameters)
         {
             Id = Guid.NewGuid().ToString();
             Time = DateTime.Now;
+            LogType = type;
 
             //Setting parameters protects us from improper implementation of BaseLogData
             if (parameters?.Length <= 0)
@@ -33,6 +35,21 @@ namespace Vdrio.Diagnostics
                     case LogDataType.Trace:
                         Enum.TryParse(parameters[0].ToString(), out TraceType traceType);
                         CreateTraceLogData(traceType, parameters[1] as string);
+                        break;
+                    case LogDataType.Error:
+                        Enum.TryParse(parameters[0].ToString(), out ErrorLevel errorLevel);
+                        CreateErrorLogData(errorLevel, parameters[1] as string);
+                        break;
+                    case LogDataType.Warn:
+                        Enum.TryParse(parameters[0].ToString(), out WarningLevel warnLevel);
+                        CreateWarnLogData(warnLevel, parameters[1] as string);
+                        break;
+                    case LogDataType.Debug:
+                        CreateDebugLogData(parameters[0] as string);
+                        break;
+                    case LogDataType.UserInput:
+                        Enum.TryParse(parameters[0].ToString(), out UserInputType userInputType);
+                        CreateUserInputLogData(userInputType, parameters[1] as string);
                         break;
                     default:
                         Message = parameters[0] as string;
@@ -67,7 +84,7 @@ namespace Vdrio.Diagnostics
         }
 
         [Ignore]
-        public Exception Exception { get; set; }
+        public Exception LogException { get; set; }
         public string JSONException { get; set; }
         public string LongLogMessage { get; set; }
         public string ShortLogMessage { get; set; }
@@ -75,17 +92,19 @@ namespace Vdrio.Diagnostics
         public string Message { get; set; }
         [PrimaryKey]
         public string Id { get; set; }
-        public string ExcpetionJSON { get; set; }
+        [Ignore]
         public LogDataType LogType { get; set; }
-        public int LogTypeInt { get; set; }
+        public ErrorLevel ErrorLevel { get; set; }
+        public WarningLevel WarningLevel { get; set; }
+        public TraceType TraceType { get; set; }
+        public UserInputType UserInputType { get; set; }
 
         public abstract void CreateDebugLogData(string message);
-        public abstract void CreateErrorLogData();
-
+        public abstract void CreateErrorLogData(ErrorLevel level, string message);
         public abstract void CreateExceptionLogData(Exception ex, string messsage);
-
         public abstract void CreateTraceLogData(TraceType type, string message);
+        public abstract void CreateUserInputLogData(UserInputType type, string message);
 
-        public abstract void CreateUserInputLogData();
+        public abstract void CreateWarnLogData(WarningLevel level, string message);
     }
 }
