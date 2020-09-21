@@ -84,6 +84,7 @@ namespace Vdrio.Diagnostics
         /// </summary>
         /// <remarks>
         /// <para> Must be called before any logging is done.</para>
+        /// <para> Default values for TimeSpans are 12 hours, 30 days, Infinite respectively</para>
         /// <para> File path will include start date time appended at end of file, format: {logFileName}MMddyyyy_HHMM.db</para>
         /// <para> Path will ignore file type, ie .txt, .db. This will make a .txt file and optional .db file for log storage</para>
         /// </remarks>
@@ -101,7 +102,7 @@ namespace Vdrio.Diagnostics
                 ArchiveInterval = archiveInterval ?? TimeSpan.FromDays(30);
                 CurrentArchiveFolderPath = archiveFolderPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VdrioLogger", "Archive");
 
-                if (ArchiveInterval <= CreateNewLogFileInterval || DeleteAfter <= ArchiveInterval)
+                if (ArchiveInterval <= CreateNewLogFileInterval || (DeleteAfter != Timeout.InfiniteTimeSpan && DeleteAfter <= ArchiveInterval))
                 {
                     throw new InvalidOperationException("Archive interval must be greater than CreateNewLogFileInterval and DeleteAfter must be greater than archive interval");
                 }
@@ -827,7 +828,8 @@ namespace Vdrio.Diagnostics
                 {
                     Logger<T>.Initialize();
                 }
-                if (db.TableMappings.FirstOrDefault(x => x.MappedType == typeof(T)) == null)
+                TableMapping myTableMapping = Logger<T>.Database.TableMappings.FirstOrDefault(x => x.MappedType == typeof(T));
+                if (Logger<T>.Database.TableMappings.FirstOrDefault(x => x.MappedType == typeof(T)) == null)
                 {
                     throw new NotImplementedException("Database must have a table of type " + typeof(T).ToString());
                 }
@@ -837,6 +839,7 @@ namespace Vdrio.Diagnostics
                     string guid = Guid.NewGuid().ToString();
                     if (db.Table<T>().FirstOrDefault(x => x.Id == guid) == null)
                     {
+                        isUnique = true;
                         return guid;
                     }
                 }
@@ -925,6 +928,7 @@ namespace Vdrio.Diagnostics
         /// </summary>
         /// <remarks>
         /// <para> Must be called before any logging is done.</para>
+        /// <para> Default values for TimeSpans are 12 hours, 30 days, Infinite respectively</para>
         /// <para> File path will include start date time appended at end of file, format: {logFileName}MMddyyyy_HHMM.db</para>
         /// <para> Path will ignore file type, ie .txt, .db. This will make a .txt file and optional .db file for log storage</para>
         /// </remarks>
@@ -942,7 +946,7 @@ namespace Vdrio.Diagnostics
                 ArchiveInterval = archiveInterval ?? TimeSpan.FromDays(30);
                 CurrentArchiveFolderPath = archiveFolderPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VdrioLogger", "Archive");
 
-                if (ArchiveInterval <= CreateNewLogFileInterval || DeleteAfter <= ArchiveInterval)
+                if (ArchiveInterval <= CreateNewLogFileInterval || (DeleteAfter != Timeout.InfiniteTimeSpan && DeleteAfter <= ArchiveInterval))
                 {
                     throw new InvalidOperationException("Archive interval must be greater than CreateNewLogFileInterval and DeleteAfter must be greater than archive interval");
                 }
@@ -1046,7 +1050,7 @@ namespace Vdrio.Diagnostics
                 {
                     Database?.Dispose();
                     Database = new SQLiteConnection(path);
-                    Database.CreateTable(typeof(LogData));
+                    Database.CreateTable(typeof(T));
                 }
                 DeleteOldFiles();
                 ArchiveOldFiles();

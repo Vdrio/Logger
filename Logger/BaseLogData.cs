@@ -85,26 +85,70 @@ namespace Vdrio.Diagnostics
 
         [Ignore]
         public Exception LogException { get; set; }
-        public string JSONException { get; set; }
         public string LongLogMessage { get; set; }
         public string ShortLogMessage { get; set; }
         public DateTime Time { get; set; }
         public string Message { get; set; }
         [PrimaryKey]
         public string Id { get; set; }
-        [Ignore]
         public LogDataType LogType { get; set; }
         public ErrorLevel ErrorLevel { get; set; }
         public WarningLevel WarningLevel { get; set; }
         public TraceType TraceType { get; set; }
         public UserInputType UserInputType { get; set; }
 
+        /// <summary>
+        /// The "Constructor" for a BaseLogData with LogDataType of Debug
+        /// </summary>
+        /// <remarks>
+        /// <para>Here, you are expected to set the LogType, Message, ShortLogMessage and LongLogMessage. </para>
+        /// <para>LongLogMessage is what is outputted to the .txt log</para>
+        /// </remarks>
         public abstract void CreateDebugLogData(string message);
+
+        /// <summary>
+        /// The "Constructor" for a BaseLogData with LogDataType of Error
+        /// </summary>
+        /// <remarks>
+        /// <para>Here, you are expected to set the LogType, Message, ShortLogMessage and LongLogMessage. </para>
+        /// <para>LongLogMessage is what is outputted to the .txt log</para>
+        /// </remarks>
         public abstract void CreateErrorLogData(ErrorLevel level, string message);
-        public abstract void CreateExceptionLogData(Exception ex, string messsage);
+
+        /// <summary>
+        /// The "Constructor" for a BaseLogData with LogDataType of Exception
+        /// </summary>
+        /// <remarks>
+        /// <para>Here, you are expected to set the LogType, Message, ShortLogMessage and LongLogMessage. </para>
+        /// <para>LongLogMessage is what is outputted to the .txt log</para>
+        /// </remarks>
+        public abstract void CreateExceptionLogData(Exception ex, string message);
+
+        /// <summary>
+        /// The "Constructor" for a BaseLogData with LogDataType of Trace
+        /// </summary>
+        /// <remarks>
+        /// <para>Here, you are expected to set the LogType, Message, ShortLogMessage and LongLogMessage. </para>
+        /// <para>LongLogMessage is what is outputted to the .txt log</para>
+        /// </remarks>
         public abstract void CreateTraceLogData(TraceType type, string message);
+
+        /// <summary>
+        /// The "Constructor" for a BaseLogData with LogDataType of UserInput
+        /// </summary>
+        /// <remarks>
+        /// <para>Here, you are expected to set the LogType, Message, ShortLogMessage and LongLogMessage. </para>
+        /// <para>LongLogMessage is what is outputted to the .txt log</para>
+        /// </remarks>
         public abstract void CreateUserInputLogData(UserInputType type, string message);
 
+        /// <summary>
+        /// The "Constructor" for a BaseLogData with LogDataType of Warn
+        /// </summary>
+        /// <remarks>
+        /// <para>Here, you are expected to set the LogType, Message, ShortLogMessage and LongLogMessage. </para>
+        /// <para>LongLogMessage is what is outputted to the .txt log</para>
+        /// </remarks>
         public abstract void CreateWarnLogData(WarningLevel level, string message);
     }
 }

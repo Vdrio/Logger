@@ -3,10 +3,43 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>8.0</LangVersion>
+	  <PackageId>Vdrio.Diagnostics</PackageId>
+	  <Version>0.9.0</Version>
+	  <Authors>Lucas Glass</Authors>
+	  <Company>Vdrio Inc</Company>
+	  <Description>
+		  This library comes with a static Logger, both a default implementation and a generic option. This can create a log that saves to a .txt file and optionally a sql db for querying. Fully custom implementations possible if you don't like the default LogData. Automatically generates new log files at specified interval and can delete and archive to a specified folder at specified interval.
+	  </Description>
+	  <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	  <RootNamespace>Vdrio.Diagnostics</RootNamespace>
+	  <LicenseUrl>https://github.com/Vdrio/Encryption/License.txt</LicenseUrl>
+	  <License>MIT</License>
+	  <Summary>.NET Standard Logger</Summary>
+	  <ProjectUrl>https://github.com/Vdrio/Logger</ProjectUrl>
+	  <RepositoryUrl>https://github.com/Vdrio/Logger</RepositoryUrl>
+	  <RepositoryType>Github</RepositoryType>
+	  <PackageLicenseFile>LoggerLicense.txt</PackageLicenseFile>
+	  <PackageProjectUrl>https://github.com/Vdrio/Logger</PackageProjectUrl>
+	  <Copyright>2020 Vdrio Inc</Copyright>
+	  <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="LoggerLicense.txt">
+			<Pack>True</Pack>
+			<PackagePath></PackagePath>
+		</None>
+	</ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="sqlite-net-pcl" Version="1.7.335" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="License.txt" />
   </ItemGroup>
 
 </Project>
