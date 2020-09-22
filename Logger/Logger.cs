@@ -905,7 +905,7 @@ namespace Vdrio.Diagnostics
                 CreateNewLogFileInterval = createNewLogFileInterval ?? TimeSpan.FromHours(12);
                 DeleteAfter = deleteAfter ?? Timeout.InfiniteTimeSpan;
                 ArchiveInterval = archiveInterval ?? TimeSpan.FromDays(30);
-                CurrentArchiveFolderPath = archiveFolderPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VdrioLogger", "Archive");
+                CurrentArchiveFolderPath = archiveFolderPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VdrioArchiveLogs");
                 SaveToSQLDatabase = saveToSQLDatabase;
 
 
@@ -944,7 +944,7 @@ namespace Vdrio.Diagnostics
                 CreateNewLogFileInterval = createNewLogFileInterval ?? TimeSpan.FromHours(12);
                 DeleteAfter = deleteAfter ?? Timeout.InfiniteTimeSpan;
                 ArchiveInterval = archiveInterval ?? TimeSpan.FromDays(30);
-                CurrentArchiveFolderPath = archiveFolderPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VdrioLogger", "Archive");
+                CurrentArchiveFolderPath = archiveFolderPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VdrioArchiveLogs");
 
                 if (ArchiveInterval <= CreateNewLogFileInterval || (DeleteAfter != Timeout.InfiniteTimeSpan && DeleteAfter <= ArchiveInterval))
                 {
